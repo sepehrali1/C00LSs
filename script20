@@ -1,0 +1,1274 @@
+-- Old-School White Server-Side Executor GUI (.exe style) - Execute As, Smart Scroll, Music & Admin Tab
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- پاک کردن پنل قبلی اگر وجود داشته باشه
+if CoreGui:FindFirstChild("OldSSExecutor") then
+	CoreGui.OldSSExecutor:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "OldSSExecutor"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- فریم اصلی پنجره
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 1
+MainFrame.Position = UDim2.new(0.5, -290, 0.5, -132)
+MainFrame.Size = UDim2.new(0, 580, 0, 265)
+MainFrame.Active = true
+
+-- نوار بالای پنل (TopBar)
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+TopBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
+TopBar.BorderSizePixel = 1
+TopBar.Size = UDim2.new(1, 0, 0, 25)
+
+-- سیستم درگ سازگار با کامپیوتر و موبایل
+local dragging, dragInput, dragStart, startPos
+
+TopBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- متن عنوان
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Parent = TopBar
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Position = UDim2.new(0, 5, 0, 0)
+TitleLabel.Size = UDim2.new(0, 250, 1, 0)
+TitleLabel.Font = Enum.Font.Code
+TitleLabel.Text = "Project C00L.exe"
+TitleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+TitleLabel.TextSize = 13
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- دکمه بستن
+local CloseButton = Instance.new("TextButton")
+CloseButton.Parent = TopBar
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+CloseButton.BorderSizePixel = 1
+CloseButton.Position = UDim2.new(1, -22, 0, 2)
+CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Font = Enum.Font.Code
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+CloseButton.TextSize = 12
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+-- تابع مدیریت متن‌های پیش‌فرض کادرها (Placeholder)
+local function setupPlaceholder(textBox, defaultText)
+	textBox.Text = defaultText
+	textBox.Focused:Connect(function()
+		if textBox.Text == defaultText then
+			textBox.Text = ""
+		end
+	end)
+	textBox.FocusLost:Connect(function()
+		if textBox.Text == "" then
+			textBox.Text = defaultText
+		end
+	end)
+end
+
+-- نوار تب‌بندی بالای پنل
+local TabBar = Instance.new("Frame")
+TabBar.Name = "TabBar"
+TabBar.Parent = MainFrame
+TabBar.BackgroundColor3 = Color3.fromRGB(235, 235, 235)
+TabBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
+TabBar.BorderSizePixel = 1
+TabBar.Position = UDim2.new(0, 0, 0, 25)
+TabBar.Size = UDim2.new(1, 0, 0, 22)
+
+local ExecutorTabBtn = Instance.new("TextButton")
+ExecutorTabBtn.Name = "ExecutorTabBtn"
+ExecutorTabBtn.Parent = TabBar
+ExecutorTabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ExecutorTabBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ExecutorTabBtn.BorderSizePixel = 1
+ExecutorTabBtn.Position = UDim2.new(0, 5, 0, 1)
+ExecutorTabBtn.Size = UDim2.new(0, 110, 0, 20)
+ExecutorTabBtn.Font = Enum.Font.Code
+ExecutorTabBtn.Text = "Executor Tab"
+ExecutorTabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ExecutorTabBtn.TextSize = 11
+
+local AdminTabBtn = Instance.new("TextButton")
+AdminTabBtn.Name = "AdminTabBtn"
+AdminTabBtn.Parent = TabBar
+AdminTabBtn.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+AdminTabBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+AdminTabBtn.BorderSizePixel = 1
+AdminTabBtn.Position = UDim2.new(0, 118, 0, 1)
+AdminTabBtn.Size = UDim2.new(0, 110, 0, 20)
+AdminTabBtn.Font = Enum.Font.Code
+AdminTabBtn.Text = "Admin Tab"
+AdminTabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+AdminTabBtn.TextSize = 11
+
+-- فریم محتوای Executor Tab
+local ExecutorContainer = Instance.new("Frame")
+ExecutorContainer.Name = "ExecutorContainer"
+ExecutorContainer.Parent = MainFrame
+ExecutorContainer.BackgroundTransparency = 1
+ExecutorContainer.Position = UDim2.new(0, 0, 0, 48)
+ExecutorContainer.Size = UDim2.new(1, 0, 1, -48)
+ExecutorContainer.Visible = true
+
+-- سیستم اسکرول هوشمند برای کادر اسکریپت
+local CodeScroll = Instance.new("ScrollingFrame")
+CodeScroll.Name = "CodeScroll"
+CodeScroll.Parent = ExecutorContainer
+CodeScroll.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CodeScroll.BorderColor3 = Color3.fromRGB(0, 0, 0)
+CodeScroll.BorderSizePixel = 1
+CodeScroll.Position = UDim2.new(0, 10, 0, 10)
+CodeScroll.Size = UDim2.new(0, 350, 0, 132)
+CodeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+CodeScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+CodeScroll.ScrollBarThickness = 6
+CodeScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0)
+
+local TextBox = Instance.new("TextBox")
+TextBox.Name = "CodeBox"
+TextBox.Parent = CodeScroll
+TextBox.BackgroundTransparency = 1
+TextBox.Position = UDim2.new(0, 0, 0, 0)
+TextBox.Size = UDim2.new(1, 0, 1, 0)
+TextBox.AutomaticSize = Enum.AutomaticSize.Y
+TextBox.ClearTextOnFocus = false
+TextBox.Font = Enum.Font.Code
+TextBox.MultiLine = true
+TextBox.TextWrapped = true
+TextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextBox.TextSize = 14
+TextBox.TextXAlignment = Enum.TextXAlignment.Left
+TextBox.TextYAlignment = Enum.TextYAlignment.Top
+
+setupPlaceholder(TextBox, "-- Enter Script Here...")
+
+-- متغیر حالت اجرای هدف (Execute As Mode)
+local selectedTargetMode = LocalPlayer.Name
+
+-- دکمه منوی Execute As
+local ExecuteAsBtn = Instance.new("TextButton")
+ExecuteAsBtn.Name = "ExecuteAsBtn"
+ExecuteAsBtn.Parent = ExecutorContainer
+ExecuteAsBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ExecuteAsBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ExecuteAsBtn.BorderSizePixel = 1
+ExecuteAsBtn.Position = UDim2.new(0, 10, 0, 146)
+ExecuteAsBtn.Size = UDim2.new(0, 350, 0, 24)
+ExecuteAsBtn.Font = Enum.Font.Code
+ExecuteAsBtn.Text = "Execute As: Me"
+ExecuteAsBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ExecuteAsBtn.TextSize = 11
+
+-- فریم کشویی لیست پلیرها
+local DropdownFrame = Instance.new("Frame")
+DropdownFrame.Name = "DropdownFrame"
+DropdownFrame.Parent = ExecutorContainer
+DropdownFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+DropdownFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+DropdownFrame.BorderSizePixel = 1
+DropdownFrame.Position = UDim2.new(0, 10, 0, 10)
+DropdownFrame.Size = UDim2.new(0, 350, 0, 160)
+DropdownFrame.Visible = false
+DropdownFrame.ZIndex = 5
+
+local DropdownScroll = Instance.new("ScrollingFrame")
+DropdownScroll.Name = "DropdownScroll"
+DropdownScroll.Parent = DropdownFrame
+DropdownScroll.BackgroundTransparency = 1
+DropdownScroll.Size = UDim2.new(1, 0, 1, 0)
+DropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+DropdownScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+DropdownScroll.ScrollBarThickness = 6
+DropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0)
+DropdownScroll.ZIndex = 6
+
+local DropdownLayout = Instance.new("UIListLayout")
+DropdownLayout.Parent = DropdownScroll
+DropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
+DropdownLayout.Padding = UDim.new(0, 2)
+
+local DropdownPadding = Instance.new("UIPadding")
+DropdownPadding.Parent = DropdownScroll
+DropdownPadding.PaddingTop = UDim.new(0, 2)
+DropdownPadding.PaddingLeft = UDim.new(0, 2)
+DropdownPadding.PaddingRight = UDim.new(0, 2)
+
+-- تابع به‌روزرسانی لیست پلیرها در منوی کشویی
+local function refreshPlayerDropdown()
+	for _, child in ipairs(DropdownScroll:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	
+	local order = 1
+	
+	-- دکمه All
+	local allBtn = Instance.new("TextButton")
+	allBtn.Parent = DropdownScroll
+	allBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+	allBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	allBtn.BorderSizePixel = 1
+	allBtn.Size = UDim2.new(1, 0, 0, 24)
+	allBtn.Font = Enum.Font.Code
+	allBtn.Text = "All (Everyone)"
+	allBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	allBtn.TextSize = 12
+	allBtn.TextXAlignment = Enum.TextXAlignment.Left
+	allBtn.LayoutOrder = order
+	allBtn.ZIndex = 6
+	order = order + 1
+	
+	local p1 = Instance.new("UIPadding")
+	p1.Parent = allBtn
+	p1.PaddingLeft = UDim.new(0, 6)
+	
+	allBtn.MouseButton1Click:Connect(function()
+		selectedTargetMode = "All"
+		ExecuteAsBtn.Text = "Execute As: All"
+		DropdownFrame.Visible = false
+	end)
+	
+	-- دکمه Others
+	local othersBtn = Instance.new("TextButton")
+	othersBtn.Parent = DropdownScroll
+	othersBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+	othersBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	othersBtn.BorderSizePixel = 1
+	othersBtn.Size = UDim2.new(1, 0, 0, 24)
+	othersBtn.Font = Enum.Font.Code
+	othersBtn.Text = "Others (Excluding Self)"
+	othersBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	othersBtn.TextSize = 12
+	othersBtn.TextXAlignment = Enum.TextXAlignment.Left
+	othersBtn.LayoutOrder = order
+	othersBtn.ZIndex = 6
+	order = order + 1
+	
+	local p2 = Instance.new("UIPadding")
+	p2.Parent = othersBtn
+	p2.PaddingLeft = UDim.new(0, 6)
+	
+	othersBtn.MouseButton1Click:Connect(function()
+		selectedTargetMode = "Others"
+		ExecuteAsBtn.Text = "Execute As: Others"
+		DropdownFrame.Visible = false
+	end)
+	
+-- لیست تک‌تک پلیرها
+	for _, plr in ipairs(Players:GetPlayers()) do
+		local pBtn = Instance.new("TextButton")
+		pBtn.Parent = DropdownScroll
+		pBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		pBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		pBtn.BorderSizePixel = 1
+		pBtn.Size = UDim2.new(1, 0, 0, 24)
+		pBtn.Font = Enum.Font.Code
+		
+		local isMe = (plr == LocalPlayer)
+		pBtn.Text = plr.Name .. (isMe and " (You)" or "")
+		pBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+		pBtn.TextSize = 12
+		pBtn.TextXAlignment = Enum.TextXAlignment.Left
+		pBtn.LayoutOrder = order
+		pBtn.ZIndex = 6
+		order = order + 1
+		
+		local p3 = Instance.new("UIPadding")
+		p3.Parent = pBtn
+		p3.PaddingLeft = UDim.new(0, 6)
+		
+		local pName = plr.Name
+		pBtn.MouseButton1Click:Connect(function()
+			selectedTargetMode = pName
+			if isMe then
+				ExecuteAsBtn.Text = "Execute As: Me"
+			else
+				ExecuteAsBtn.Text = "Execute As: " .. pName
+			end
+			DropdownFrame.Visible = false
+		end)
+	end
+    end
+
+ExecuteAsBtn.MouseButton1Click:Connect(function()
+	refreshPlayerDropdown()
+	DropdownFrame.Visible = not DropdownFrame.Visible
+end)
+
+-- سیستم اسکرول اسکریپت‌ها (سمت راست)
+local ScriptScroll = Instance.new("ScrollingFrame")
+ScriptScroll.Name = "ScriptScroll"
+ScriptScroll.Parent = ExecutorContainer
+ScriptScroll.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ScriptScroll.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ScriptScroll.BorderSizePixel = 1
+ScriptScroll.Position = UDim2.new(0, 370, 0, 10)
+ScriptScroll.Size = UDim2.new(0, 200, 0, 196)
+ScriptScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScriptScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScriptScroll.ScrollBarThickness = 8
+ScriptScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScriptScroll
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 3)
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.Parent = ScriptScroll
+UIPadding.PaddingTop = UDim.new(0, 3)
+UIPadding.PaddingLeft = UDim.new(0, 3)
+UIPadding.PaddingRight = UDim.new(0, 3)
+
+local function addScriptButton(name, scriptCode, order)
+	local btn = Instance.new("TextButton")
+	btn.Name = name .. "Btn"
+	btn.Parent = ScriptScroll
+	btn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+	btn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	btn.BorderSizePixel = 1
+	btn.Size = UDim2.new(1, 0, 0, 24)
+	btn.Font = Enum.Font.Code
+	btn.Text = name
+	btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	btn.TextSize = 12
+	btn.TextXAlignment = Enum.TextXAlignment.Left
+	btn.LayoutOrder = order
+
+	local padding = Instance.new("UIPadding")
+	padding.Parent = btn
+	padding.PaddingLeft = UDim.new(0, 6)
+
+	btn.MouseButton1Click:Connect(function()
+		local finalCode = string.gsub(scriptCode, "C00LH4CK1124", LocalPlayer.Name)
+		TextBox.Text = finalCode
+	end)
+end
+
+-- لیست اسکریپت‌ها
+addScriptButton("R6", 'require(3436957371):r6("C00LH4CK1124")', 1)
+addScriptButton("Respawn", 'require(3229910984):respawn("C00LH4CK1124")', 2)
+addScriptButton("C00LGUI", 'require(14125553864):Fire("C00LH4CK1124","c00lkidd")', 3)
+addScriptButton("John Doe", 'require(2845929020).ooga("C00LH4CK1124")', 4)
+addScriptButton("goner", 'require(4513235536).G("C00LH4CK1124")', 5)
+addScriptButton("Hand", 'require(5375399205).Player("C00LH4CK1124")', 6)
+addScriptButton("HD Admin", 'require(7192763922).load("C00LH4CK1124")', 7)
+addScriptButton("Gojo", 'require(103408394508146).unlimited("C00LH4CK1124")', 8)
+addScriptButton("Dominos Venary", 'require(3256686965).load("C00LH4CK1124")', 9)
+addScriptButton("Special Forces", 'require(7215403029).RRT("C00LH4CK1124")', 10)
+addScriptButton("Tank", 'require(7203746402).tonk("C00LH4CK1124")', 11)
+addScriptButton("NoobSpammer", 'require(5193737424)("C00LH4CK1124",false)', 12)
+addScriptButton("Nuke", 'require(4867426485):SD2("C00LH4CK1124")', 13)
+addScriptButton("K00PGUI V11", 'require(15267263357).V11("C00LH4CK1124")', 14)
+addScriptButton("K00PGUI V8", 'require(14829670677).EDITL0L("C00LH4CK1124")', 15)
+addScriptButton("BanHammer V1", 'require(5448035802).Hammer("C00LH4CK1124","BanHammer")', 16)
+addScriptButton("BanHammer V3", 'require(2594357090).bban"C00LH4CK1124"', 17)
+addScriptButton("Vereus", 'require(3306802406).Player("C00LH4CK1124")', 18)
+addScriptButton("Fun Gear", 'require(3164199134).johndoe("C00LH4CK1124", "LOLWHY")', 19)
+addScriptButton("KJ", 'require(17776365113).kj("C00LH4CK1124")', 20)
+addScriptButton("Saitama", 'require(14499140823)("C00LH4CK1124", "saitama2")', 21)
+addScriptButton("Sukuna", 'require(89529616632600)("C00LH4CK1124", "Sukuna")', 22)
+addScriptButton("Toji", 'require(79380098887108).Toji("C00LH4CK1124")', 23)
+addScriptButton("Aizen", 'require(89529616632600)("C00LH4CK1124", "Aizen")', 24)
+addScriptButton("Garou", 'require(14499140823)("C00LH4CK1124", "garou2")', 25)
+addScriptButton("Genos", 'require(14499140823)("C00LH4CK1124", "genos")', 26)
+addScriptButton("StarGlitcher", 'require(4749896781).no("C00LH4CK1124")', 27)
+addScriptButton("Yuta", 'require(89529616632600)("C00LH4CK1124", "Yuta")', 28)
+addScriptButton("Dex", 'require(14572394952)("C00LH4CK1124")', 29)
+addScriptButton("Steve", 'require(15581949972).mc("C00LH4CK1124")', 30)
+addScriptButton("Zombie City", 'require(12653566767).load("C00LH4CK1124")', 31)
+addScriptButton("Classic Roblox Map", 'require(6929171488).loadMap()', 32)
+addScriptButton("Classic Roblox", 'require(83741719410595)(true)', 33)
+addScriptButton("Ravenger Claws", 'require(2557441421)("C00LH4CK1124")', 34)
+addScriptButton("Void Prince", 'require(4771194490):void("C00LH4CK1124")', 35)
+addScriptButton("Xester", 'require(6099241563).load("C00LH4CK1124")', 36)
+addScriptButton("Nightmare", 'require(4943481014).Nightmare("C00LH4CK1124")', 37)
+addScriptButton("Sensation", 'require(82303184140990)("C00LH4CK1124", ColorSequence.new(Color3.fromRGB(71, 148, 253), Color3.fromRGB(71, 253, 160)), "Standard")', 38)
+addScriptButton("Dominant Executor", 'require(121425622240385).dominantultimate("C00LH4CK1124")', 39)
+addScriptButton("Tubers93 Gui", 'require(12896770922).kknog4yharam("C00LH4CK1124")', 40)
+addScriptButton("RC7", 'require(12350030542).RC7("C00LH4CK1124")', 41)
+addScriptButton("Unlimited Flexworks", 'require(18808399962).load("C00LH4CK1124")', 42)
+addScriptButton("Mcdonalds", 'require(107814387426166).Mcdonalds()', 43)
+addScriptButton("FNAF 1", 'require(12070820190).fnaf1()', 44)
+addScriptButton("Raise A Floppa", 'require(10030357005).map()', 45)
+addScriptButton("Mountain House", 'require(7993365051).CLoad()', 46)
+addScriptButton("KFC", 'require(3615713971).load("C00LH4CK1124")', 47)
+addScriptButton("Baldi Map", 'require(3160908861).school()', 48)
+addScriptButton("Bendy Map", 'require(3161312283).bendymap()', 49)
+addScriptButton("RedWood Prison Map", 'require(3161149042).redwood()', 50)
+addScriptButton("SpongeBob Map", 'require(3164497408).spongebob()', 51)
+addScriptButton("Grab Knife", 'require(93444499562289).DE("C00LH4CK1124")', 52)
+addScriptButton("Rainbow Stand", 'require(5367599184).Dark("C00LH4CK1124")', 53)
+addScriptButton("Yuji Itadori", 'require(121222334712133).Yuji("C00LH4CK1124","yuji")', 54)
+addScriptButton("Primadon", 'require(94673163261524)("C00LH4CK1124")', 55)
+addScriptButton("United Sukuna", 'require(118335269855795).Sukuna("C00LH4CK1124", "sukuna")', 56)
+addScriptButton("Mimicry", 'require(7400411100).load("C00LH4CK1124")', 57)
+addScriptButton("Pandora", 'require(3547672868).p11("C00LH4CK1124")', 58)
+addScriptButton("Manga Sukuna", 'require(135612536689375).Load("C00LH4CK1124",true)', 59)
+addScriptButton("Combat", 'require(15627085040).RAroblox("C00LH4CK1124")', 60)
+addScriptButton("Hyper Car", 'require(5874393699).load("C00LH4CK1124")', 61)
+addScriptButton("SCP-173", 'require(17234454946).load("C00LH4CK1124")', 62)
+addScriptButton("project sonic ss", 'require(5104783290).projectreptilev3leaklolz("C00LH4CK1124")', 63)
+addScriptButton("Organator", 'require(119819780800418).MorphMonster("C00LH4CK1124", "organator")', 64)
+addScriptButton("Mimic", 'require(77842202241216).load("C00LH4CK1124")', 65)
+addScriptButton("Siren Head", 'require(75834950186546).MorphMonster("C00LH4CK1124", "sirenhead2")', 66)
+addScriptButton("Death Angel", 'require(127829554397525).deathangel("C00LH4CK1124")', 67)
+addScriptButton("American Demo", 'require(111697793579923).americandemo("C00LH4CK1124")', 68)
+addScriptButton("demogorgon", 'require(90079465185110).load("C00LH4CK1124")', 69)
+addScriptButton("inf yield", 'require(7634392335)("C00LH4CK1124")', 70)
+addScriptButton("Neptunian V", 'require(14217382860)("C00LH4CK1124")', 71)
+addScriptButton("Immortality Lord", 'require(6534274227)("C00LH4CK1124")', 72)
+addScriptButton("Cigarette", 'require(122168186720709).roko("C00LH4CK1124")', 73)
+addScriptButton("Soul Reaper", 'require(7972086233).CLoad("C00LH4CK1124")', 74)
+addScriptButton("Grab Gun", 'require(4804256797):Fire("C00LH4CK1124","a")', 75)
+addScriptButton("C4", 'require(0x1767bf813)("C00LH4CK1124")', 76)
+addScriptButton("Another Gojo", 'require(14499140823)("C00LH4CK1124", "sorcerer")', 77)
+addScriptButton("UNO", 'require(13902025530).Give("C00LH4CK1124")', 78)
+addScriptButton("Doge Army", 'require(5115249013).fehack("C00LH4CK1124")', 79)
+addScriptButton("Blue2Spooky", 'require(137870571533698):load("C00LH4CK1124")', 80)
+addScriptButton("Squidward Bomb", 'require(11838049109).squidBomb("C00LH4CK1124")', 81)
+addScriptButton("F3X", 'require(16662897769).load("C00LH4CK1124")', 82)
+addScriptButton("Infinite Glitcher", 'require(4722218391).load("C00LH4CK1124")', 83)
+addScriptButton("Dodge Charger", 'require(14649538351)("C00LH4CK1124")', 84)
+addScriptButton("HappyHub", 'require(113992625700725):Hload("C00LH4CK1124")', 85)
+addScriptButton("Crystal Dance V2", 'require(3940475835).kdancev2("C00LH4CK1124")', 86)
+addScriptButton("Rage Bike", 'require(7473216460).load("C00LH4CK1124")', 87)
+addScriptButton("Project Stigma", 'require(132938459666886).stigma("C00LH4CK1124")', 88)
+addScriptButton("Dev Uzi", 'require(16662808456):Fire("C00LH4CK1124","dev-uzi")', 89)
+addScriptButton("caducus", 'require(5686002742):Fire("C00LH4CK1124","caducus")', 90)
+addScriptButton("server admin", 'require(4665394711).load("C00LH4CK1124")', 91)
+
+-- دکمه‌های پایین صفحه Executor Tab
+local ExecuteBtn = Instance.new("TextButton")
+ExecuteBtn.Name = "ExecuteButton"
+ExecuteBtn.Parent = ExecutorContainer
+ExecuteBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ExecuteBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ExecuteBtn.BorderSizePixel = 1
+ExecuteBtn.Position = UDim2.new(0, 10, 0, 178)
+ExecuteBtn.Size = UDim2.new(0, 66, 0, 28)
+ExecuteBtn.Font = Enum.Font.Code
+ExecuteBtn.Text = "Execute"
+ExecuteBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ExecuteBtn.TextSize = 12
+
+local ClearBtn = Instance.new("TextButton")
+ClearBtn.Name = "ClearButton"
+ClearBtn.Parent = ExecutorContainer
+ClearBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ClearBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ClearBtn.BorderSizePixel = 1
+ClearBtn.Position = UDim2.new(0, 78, 0, 178)
+ClearBtn.Size = UDim2.new(0, 66, 0, 28)
+ClearBtn.Font = Enum.Font.Code
+ClearBtn.Text = "Clear"
+ClearBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ClearBtn.TextSize = 12
+
+local InjectBtn = Instance.new("TextButton")
+InjectBtn.Name = "InjectButton"
+InjectBtn.Parent = ExecutorContainer
+InjectBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+InjectBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+InjectBtn.BorderSizePixel = 1
+InjectBtn.Position = UDim2.new(0, 146, 0, 178)
+InjectBtn.Size = UDim2.new(0, 66, 0, 28)
+InjectBtn.Font = Enum.Font.Code
+InjectBtn.Text = "Inject"
+InjectBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+InjectBtn.TextSize = 12
+
+local R6Btn = Instance.new("TextButton")
+R6Btn.Name = "R6Button"
+R6Btn.Parent = ExecutorContainer
+R6Btn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+R6Btn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+R6Btn.BorderSizePixel = 1
+R6Btn.Position = UDim2.new(0, 214, 0, 178)
+R6Btn.Size = UDim2.new(0, 66, 0, 28)
+R6Btn.Font = Enum.Font.Code
+R6Btn.Text = "R6"
+R6Btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+R6Btn.TextSize = 12
+
+local REBtn = Instance.new("TextButton")
+REBtn.Name = "REButton"
+REBtn.Parent = ExecutorContainer
+REBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+REBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+REBtn.BorderSizePixel = 1
+REBtn.Position = UDim2.new(0, 282, 0, 178)
+REBtn.Size = UDim2.new(0, 66, 0, 28)
+REBtn.Font = Enum.Font.Code
+REBtn.Text = "RE"
+REBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+REBtn.TextSize = 12
+
+
+-- فریم محتوای Admin Tab
+local AdminContainer = Instance.new("ScrollingFrame")
+AdminContainer.Name = "AdminContainer"
+AdminContainer.Parent = MainFrame
+AdminContainer.BackgroundTransparency = 1
+AdminContainer.Position = UDim2.new(0, 0, 0, 48)
+AdminContainer.Size = UDim2.new(1, 0, 1, -48)
+AdminContainer.Visible = false
+AdminContainer.CanvasSize = UDim2.new(0, 0, 0, 410)
+AdminContainer.ScrollBarThickness = 6
+AdminContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0)
+
+-- 1. Hint Section
+local HintBox = Instance.new("TextBox")
+HintBox.Name = "HintBox"
+HintBox.Parent = AdminContainer
+HintBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HintBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+HintBox.BorderSizePixel = 1
+HintBox.Position = UDim2.new(0, 10, 0, 10)
+HintBox.Size = UDim2.new(0, 560, 0, 40)
+HintBox.ClearTextOnFocus = false
+HintBox.Font = Enum.Font.Code
+HintBox.MultiLine = true
+HintBox.TextWrapped = true
+HintBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+HintBox.TextSize = 13
+HintBox.TextXAlignment = Enum.TextXAlignment.Left
+HintBox.TextYAlignment = Enum.TextYAlignment.Top
+setupPlaceholder(HintBox, "Enter Hint text here...")
+
+local HintSendBtn = Instance.new("TextButton")
+HintSendBtn.Name = "HintSendBtn"
+HintSendBtn.Parent = AdminContainer
+HintSendBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+HintSendBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+HintSendBtn.BorderSizePixel = 1
+HintSendBtn.Position = UDim2.new(0, 10, 0, 55)
+HintSendBtn.Size = UDim2.new(0, 275, 0, 26)
+HintSendBtn.Font = Enum.Font.Code
+HintSendBtn.Text = "Hint"
+HintSendBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+HintSendBtn.TextSize = 12
+
+local ClearHintBtn = Instance.new("TextButton")
+ClearHintBtn.Name = "ClearHintBtn"
+ClearHintBtn.Parent = AdminContainer
+ClearHintBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ClearHintBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ClearHintBtn.BorderSizePixel = 1
+ClearHintBtn.Position = UDim2.new(0, 295, 0, 55)
+ClearHintBtn.Size = UDim2.new(0, 275, 0, 26)
+ClearHintBtn.Font = Enum.Font.Code
+ClearHintBtn.Text = "Clear Hint"
+ClearHintBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ClearHintBtn.TextSize = 12
+
+-- 2. Message Section
+local MsgBox = Instance.new("TextBox")
+MsgBox.Name = "MsgBox"
+MsgBox.Parent = AdminContainer
+MsgBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MsgBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MsgBox.BorderSizePixel = 1
+MsgBox.Position = UDim2.new(0, 10, 0, 95)
+MsgBox.Size = UDim2.new(0, 560, 0, 40)
+MsgBox.ClearTextOnFocus = false
+MsgBox.Font = Enum.Font.Code
+MsgBox.MultiLine = true
+MsgBox.TextWrapped = true
+MsgBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+MsgBox.TextSize = 13
+MsgBox.TextXAlignment = Enum.TextXAlignment.Left
+MsgBox.TextYAlignment = Enum.TextYAlignment.Top
+setupPlaceholder(MsgBox, "Enter Message text here...")
+
+local MsgSendBtn = Instance.new("TextButton")
+MsgSendBtn.Name = "MsgSendBtn"
+MsgSendBtn.Parent = AdminContainer
+MsgSendBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+MsgSendBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MsgSendBtn.BorderSizePixel = 1
+MsgSendBtn.Position = UDim2.new(0, 10, 0, 140)
+MsgSendBtn.Size = UDim2.new(0, 275, 0, 26)
+MsgSendBtn.Font = Enum.Font.Code
+MsgSendBtn.Text = "Message"
+MsgSendBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MsgSendBtn.TextSize = 12
+
+local ClearMsgBtn = Instance.new("TextButton")
+ClearMsgBtn.Name = "ClearMsgBtn"
+ClearMsgBtn.Parent = AdminContainer
+ClearMsgBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ClearMsgBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+ClearMsgBtn.BorderSizePixel = 1
+ClearMsgBtn.Position = UDim2.new(0, 295, 0, 140)
+ClearMsgBtn.Size = UDim2.new(0, 275, 0, 26)
+ClearMsgBtn.Font = Enum.Font.Code
+ClearMsgBtn.Text = "Clear Message"
+ClearMsgBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ClearMsgBtn.TextSize = 12
+
+-- 3. Skybox Section
+local SkyboxBox = Instance.new("TextBox")
+SkyboxBox.Name = "SkyboxBox"
+SkyboxBox.Parent = AdminContainer
+SkyboxBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SkyboxBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+SkyboxBox.BorderSizePixel = 1
+SkyboxBox.Position = UDim2.new(0, 10, 0, 180)
+SkyboxBox.Size = UDim2.new(0, 430, 0, 30)
+SkyboxBox.ClearTextOnFocus = false
+SkyboxBox.Font = Enum.Font.Code
+SkyboxBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+SkyboxBox.TextSize = 12
+SkyboxBox.TextXAlignment = Enum.TextXAlignment.Left
+setupPlaceholder(SkyboxBox, "Enter Decal ID for Skybox...")
+
+local SkyboxBtn = Instance.new("TextButton")
+SkyboxBtn.Name = "SkyboxBtn"
+SkyboxBtn.Parent = AdminContainer
+SkyboxBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+SkyboxBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+SkyboxBtn.BorderSizePixel = 1
+SkyboxBtn.Position = UDim2.new(0, 450, 0, 180)
+SkyboxBtn.Size = UDim2.new(0, 120, 0, 30)
+SkyboxBtn.Font = Enum.Font.Code
+SkyboxBtn.Text = "Skybox"
+SkyboxBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+SkyboxBtn.TextSize = 12
+
+-- 4. Decal Spam Section
+local DecalBox = Instance.new("TextBox")
+DecalBox.Name = "DecalBox"
+DecalBox.Parent = AdminContainer
+DecalBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+DecalBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+DecalBox.BorderSizePixel = 1
+DecalBox.Position = UDim2.new(0, 10, 0, 220)
+DecalBox.Size = UDim2.new(0, 430, 0, 30)
+DecalBox.ClearTextOnFocus = false
+DecalBox.Font = Enum.Font.Code
+DecalBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+DecalBox.TextSize = 12
+DecalBox.TextXAlignment = Enum.TextXAlignment.Left
+setupPlaceholder(DecalBox, "Enter Decal ID for Spam...")
+
+local DecalSpamBtn = Instance.new("TextButton")
+DecalSpamBtn.Name = "DecalSpamBtn"
+DecalSpamBtn.Parent = AdminContainer
+DecalSpamBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+DecalSpamBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+DecalSpamBtn.BorderSizePixel = 1
+DecalSpamBtn.Position = UDim2.new(0, 450, 0, 220)
+DecalSpamBtn.Size = UDim2.new(0, 120, 0, 30)
+DecalSpamBtn.Font = Enum.Font.Code
+DecalSpamBtn.Text = "Decal Spam"
+DecalSpamBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+DecalSpamBtn.TextSize = 12
+
+-- 5. Music Section
+local MusicBox = Instance.new("TextBox")
+MusicBox.Name = "MusicBox"
+MusicBox.Parent = AdminContainer
+MusicBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MusicBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MusicBox.BorderSizePixel = 1
+MusicBox.Position = UDim2.new(0, 10, 0, 260)
+MusicBox.Size = UDim2.new(0, 430, 0, 30)
+MusicBox.ClearTextOnFocus = false
+MusicBox.Font = Enum.Font.Code
+MusicBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+MusicBox.TextSize = 12
+MusicBox.TextXAlignment = Enum.TextXAlignment.Left
+setupPlaceholder(MusicBox, "Enter Music ID...")
+
+local PitchBox = Instance.new("TextBox")
+PitchBox.Name = "PitchBox"
+PitchBox.Parent = AdminContainer
+PitchBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+PitchBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+PitchBox.BorderSizePixel = 1
+PitchBox.Position = UDim2.new(0, 450, 0, 260)
+PitchBox.Size = UDim2.new(0, 120, 0, 30)
+PitchBox.ClearTextOnFocus = false
+PitchBox.Font = Enum.Font.Code
+PitchBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+PitchBox.TextSize = 12
+PitchBox.TextXAlignment = Enum.TextXAlignment.Center
+setupPlaceholder(PitchBox, "- Enter Pitch Here -")
+
+local MusicBtn = Instance.new("TextButton")
+MusicBtn.Name = "MusicBtn"
+MusicBtn.Parent = AdminContainer
+MusicBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+MusicBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MusicBtn.BorderSizePixel = 1
+MusicBtn.Position = UDim2.new(0, 10, 0, 300)
+MusicBtn.Size = UDim2.new(0, 275, 0, 28)
+MusicBtn.Font = Enum.Font.Code
+MusicBtn.Text = "Music"
+MusicBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MusicBtn.TextSize = 12
+
+local StopMusicBtn = Instance.new("TextButton")
+StopMusicBtn.Name = "StopMusicBtn"
+StopMusicBtn.Parent = AdminContainer
+StopMusicBtn.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+StopMusicBtn.BorderColor3 = Color3.fromRGB(0, 0, 0)
+StopMusicBtn.BorderSizePixel = 1
+StopMusicBtn.Position = UDim2.new(0, 295, 0, 300)
+StopMusicBtn.Size = UDim2.new(0, 275, 0, 28)
+StopMusicBtn.Font = Enum.Font.Code
+StopMusicBtn.Text = "Stop Sounds"
+StopMusicBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+StopMusicBtn.TextSize = 12
+
+
+-- منطق سوئیچ بین تب‌ها
+ExecutorTabBtn.MouseButton1Click:Connect(function()
+	ExecutorContainer.Visible = true
+	AdminContainer.Visible = false
+	ExecutorTabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	AdminTabBtn.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+end)
+
+AdminTabBtn.MouseButton1Click:Connect(function()
+	ExecutorContainer.Visible = false
+	AdminContainer.Visible = true
+	ExecutorTabBtn.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+	AdminTabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+end)
+
+-- تابع پردازش متن فارسی (برعکس‌ساز)
+local function processText(text)
+	local hasPersian = false
+	for _, code in utf8.codes(text) do
+		if (code >= 0x0600 and code <= 0x06FF) or (code >= 0x0750 and code <= 0x077F) then
+			hasPersian = true
+			break
+		end
+	end
+	
+	if hasPersian then
+		local chars = {}
+		for _, code in utf8.codes(text) do
+			table.insert(chars, utf8.char(code))
+		end
+		local reversed = {}
+		for i = #chars, 1, -1 do
+			table.insert(reversed, chars[i])
+		end
+		return table.concat(reversed)
+	else
+		return text
+	end
+end
+
+-- تابع ارسال نوتیفیکیشن
+local function notify(text)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = "SS Executor",
+			Text = text,
+            Duration = 3
+		})
+	end)
+end
+
+-- دکمه Clear اسکریپت
+ClearBtn.MouseButton1Click:Connect(function()
+	TextBox.Text = ""
+end)
+
+-- دکمه Clear Hint
+ClearHintBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local code = [[
+		for _, v in ipairs(workspace:GetChildren()) do
+			if v:IsA("Hint") then
+				v:Destroy()
+			end
+		end
+	]]
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Hints Cleared!") else notify("Failed to Clear Hints!") end
+end)
+
+-- دکمه Clear Message
+ClearMsgBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local code = [[
+		for _, v in ipairs(workspace:GetChildren()) do
+			if v:IsA("Message") then
+				v:Destroy()
+			end
+		end
+	]]
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Messages Cleared!") else notify("Failed to Clear Messages!") end
+end)
+
+-- دکمه R6
+R6Btn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local code = 'require(3436957371):r6("' .. LocalPlayer.Name .. '")'
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("R6 Executed!") else notify("Execution Failed!") end
+end)
+
+-- دکمه RE
+REBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local code = 'require(3229910984):respawn("' .. LocalPlayer.Name .. '")'
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("RE Executed!") else notify("Execution Failed!") end
+end)
+
+-- دکمه Hint
+HintSendBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local rawText = HintBox.Text
+	if rawText == "Enter Hint text here..." or rawText == "" then
+		notify("Error: Enter Hint text first!")
+		return
+	end
+	
+	local processed = processText(rawText)
+	local code = string.format("local h = Instance.new('Hint') h.Parent = game:GetService('Workspace') h.Text = %q", processed)
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Hint Sent!") else notify("Failed to Send Hint!") end
+end)
+
+-- دکمه Message
+MsgSendBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local rawText = MsgBox.Text
+	if rawText == "Enter Message text here..." or rawText == "" then
+		notify("Error: Enter Message text first!")
+		return
+	end
+	
+	local processed = processText(rawText)
+	local code = string.format("local m = Instance.new('Message') m.Parent = game:GetService('Workspace') m.Text = %q", processed)
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Message Sent!") else notify("Failed to Send Message!") end
+end)
+
+-- دکمه Skybox
+SkyboxBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local assetId = SkyboxBox.Text
+	if assetId == "Enter Decal ID for Skybox..." or assetId == "" then
+		notify("Error: Enter Skybox ID!")
+		return
+	end
+	
+	if not string.match(assetId, "rbxassetid://") then
+		assetId = "rbxassetid://" .. assetId
+	end
+	
+	local code = string.format([[
+		local lighting = game:GetService("Lighting")
+		for _, v in ipairs(lighting:GetChildren()) do
+			if v:IsA("Sky") then v:Destroy() end
+		end
+		local sky = Instance.new("Sky")
+		sky.Name = "CustomSky"
+		sky.SkyboxBk = %q
+		sky.SkyboxDn = %q
+		sky.SkyboxFt = %q
+		sky.SkyboxLf = %q
+		sky.SkyboxRt = %q
+		sky.SkyboxUp = %q
+		sky.Parent = lighting
+	]], assetId, assetId, assetId, assetId, assetId, assetId)
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Skybox Applied!") else notify("Failed to Apply Skybox!") end
+end)
+
+-- دکمه Decal Spam
+DecalSpamBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local assetId = DecalBox.Text
+	if assetId == "Enter Decal ID for Spam..." or assetId == "" then
+		notify("Error: Enter Decal ID!")
+		return
+	end
+	
+	if not string.match(assetId, "rbxassetid://") then
+		assetId = "rbxassetid://" .. assetId
+	end
+	
+	local code = string.format([[
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				for _, face in ipairs({Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Top, Enum.NormalId.Bottom}) do
+					local decal = Instance.new("Decal")
+					decal.Texture = %q
+					decal.Face = face
+					decal.Parent = obj
+				end
+			end
+		end
+	]], assetId)
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Decal Spammed!") else notify("Failed to Spam Decals!") end
+end)
+
+-- دکمه Music
+MusicBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local assetId = MusicBox.Text
+	if assetId == "Enter Music ID..." or assetId == "" then
+		notify("Error: Enter Music ID!")
+		return
+	end
+	
+	if not string.match(assetId, "rbxassetid://") then
+		assetId = "rbxassetid://" .. assetId
+	end
+	
+	local pitchVal = tonumber(PitchBox.Text)
+	if not pitchVal then
+		pitchVal = 1
+	end
+	
+	local code = string.format([[
+		local sound = Instance.new("Sound")
+		sound.SoundId = %q
+		sound.Looped = true
+		sound.Volume = 10
+		sound.PlaybackSpeed = %f
+		sound.Parent = game:GetService("Workspace")
+		sound:Play()
+	]], assetId, pitchVal)
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("Music Playing!") else notify("Failed to Play Music!") end
+end)
+
+-- دکمه Stop Sounds (نابودی تمام صداها)
+StopMusicBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local code = [[
+		for _, v in ipairs(game:GetService("Workspace"):GetChildren()) do
+			if v:IsA("Sound") then
+				v:Stop()
+				v:Destroy()
+			end
+		end
+	]]
+	
+	local success = pcall(function()
+		if remote.ClassName == "RemoteEvent" then
+			remote:FireServer(code)
+		elseif remote.ClassName == "RemoteFunction" then
+			remote:InvokeServer(code)
+		end
+	end)
+	
+	if success then notify("All Sounds Stopped & Destroyed!") else notify("Failed to Stop Sounds!") end
+end)
+
+-- دکمه Inject
+InjectBtn.MouseButton1Click:Connect(function()
+	notify("Scanning for backdoors...")
+	
+	task.spawn(function()
+		local Workspace = game:GetService("Workspace")
+		local backdoorFound = false
+		
+		local servicesList = {
+			Workspace,
+			game:GetService("ReplicatedStorage"),
+			game:GetService("Lighting"),
+			game:GetService("StarterGui"),
+			Players,
+			game:GetService("ReplicatedFirst"),
+			game:GetService("MaterialService"),
+			game:GetService("Teams"),
+			game:GetService("StarterPack"),
+			game:GetService("SoundService"),
+			game:GetService("TextChatService"),
+			game:GetService("Chat")
+		}
+		
+		for _, service in ipairs(servicesList) do
+			local success, descendants = pcall(function()
+				return service:GetDescendants()
+			end)
+			
+			if success and descendants then
+				for _, inst in ipairs(descendants) do
+					if backdoorFound then break end
+					
+					if inst:IsA("RemoteEvent") or inst:IsA("RemoteFunction") then
+						task.spawn(function()
+							if backdoorFound then return end
+							local testingname = tostring(math.random(100000, 999999).."_ScanTest")
+							
+							local successTest = pcall(function()
+								if inst:IsA("RemoteEvent") then
+									inst:FireServer("d = Instance.new('Model') d.Parent = game:GetService('Workspace') d.Name = '"..testingname.."'")
+								else
+									inst:InvokeServer("d = Instance.new('Model') d.Parent = game:GetService('Workspace') d.Name = '"..testingname.."'")
+								end
+							end)
+							
+							if successTest then
+								local foundObj = Workspace:WaitForChild(testingname, 3)
+								if foundObj then
+									if not backdoorFound then
+										backdoorFound = true
+										if getgenv then
+											getgenv().SelectedRemote = inst
+										else
+											_G.SelectedRemote = inst
+										end
+										notify("Injected!")
+										pcall(function()
+											foundObj:Destroy()
+										end)
+									end
+								end
+							end
+						end)
+					end
+				end
+			end
+		end
+		
+		task.wait(4.5)
+		if not backdoorFound then
+			notify("backdoor not found")
+		end
+	end)
+end)
+
+-- دکمه Execute (همراه با پشتیبانی هوشمند از All، Others و پلیرهای مختلف)
+ExecuteBtn.MouseButton1Click:Connect(function()
+	local remote = (getgenv and getgenv().SelectedRemote) or _G.SelectedRemote
+	if not remote then
+		notify("Error: Not Injected / No Remote Found!")
+		return
+	end
+	
+	local codeTemplate = TextBox.Text
+	if codeTemplate == "-- Enter Script Here..." or codeTemplate == "" then
+		notify("Error: Enter or select a script!")
+		return
+	end
+	
+	local successCount = 0
+	
+	if selectedTargetMode == "All" then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			local finalCode = string.gsub(codeTemplate, "C00LH4CK1124", plr.Name)
+			local success = pcall(function()
+				if remote.ClassName == "RemoteEvent" then
+					remote:FireServer(finalCode)
+				elseif remote.ClassName == "RemoteFunction" then
+					remote:InvokeServer(finalCode)
+				end
+			end)
+			if success then successCount = successCount + 1 end
+		end
+		notify("Executed for All (" .. successCount .. " players)")
+		
+	elseif selectedTargetMode == "Others" then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer then
+				local finalCode = string.gsub(codeTemplate, "C00LH4CK1124", plr.Name)
+				local success = pcall(function()
+					if remote.ClassName == "RemoteEvent" then
+						remote:FireServer(finalCode)
+					elseif remote.ClassName == "RemoteFunction" then
+						remote:InvokeServer(finalCode)
+					end
+				end)
+				if success then successCount = successCount + 1 end
+			end
+		end
+		notify("Executed for Others (" .. successCount .. " players)")
+		
+	else
+		-- برای یک پلیر خاص
+		local finalCode = string.gsub(codeTemplate, "C00LH4CK1124", selectedTargetMode)
+		local success = pcall(function()
+			if remote.ClassName == "RemoteEvent" then
+				remote:FireServer(finalCode)
+			elseif remote.ClassName == "RemoteFunction" then
+				remote:InvokeServer(finalCode)
+			end
+		end)
+		
+		if success then
+			notify("Executed for " .. selectedTargetMode .. "!")
+		else
+			notify("Execution Failed!")
+		end
+	end
+end)

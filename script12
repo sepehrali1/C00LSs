@@ -1,0 +1,298 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- لود کردن درگ برای UI
+pcall(function()
+local uis = game:GetService("UserInputService")
+local localplr = game.Players.LocalPlayer
+local mouse = localplr:GetMouse()
+local dragging = {}
+function dragtopos(fpos,spos,pos,frame,bounds,ar)
+    local finalpos = UDim2.new(
+        frame.Position.X.Scale, --spos.X.Scale+(fpos.X.Scale-pos.X.Scale),
+        spos.X.Offset-(fpos.X.Offset-pos.X),
+        frame.Position.Y.Scale, --spos.Y.Scale+(fpos.Y.Scale-pos.Y.Scale),
+        spos.Y.Offset-(fpos.Y.Offset-pos.Y)
+    )
+    if bounds ~= nil then
+        local UI = Instance.new("ScreenGui")
+        UI.ScreenInsets = Enum.ScreenInsets.None 
+        UI.Parent = game.CoreGui
+        local screensize = UI.AbsoluteSize
+        UI.Enabled = true
+        local replframe = frame:Clone()
+        replframe.Parent = UI
+        replframe.Position = finalpos
+        local absp = replframe.AbsolutePosition
+        local abss = replframe.AbsoluteSize
+        finalpos = UDim2.new(
+            finalpos.X.Scale,
+            math.clamp(
+                finalpos.X.Offset,
+                -finalpos.X.Scale*screensize.X,
+                -finalpos.X.Scale*screensize.X+(screensize.X-abss.X)
+            ),
+            finalpos.Y.Scale,
+            math.clamp(
+                finalpos.Y.Offset,
+                -finalpos.Y.Scale*screensize.Y,
+                (-finalpos.Y.Scale*screensize.Y)+(screensize.Y-abss.Y) -- doesnt actually do the correct position but i gave up
+            )
+        )
+        UI:Destroy()
+    end
+    frame.Position = finalpos
+end
+local drag = function(frame,bounds,chf)
+    local frames = {}
+    if frame:IsA("ScreenGui") then
+        for i,v in pairs(frame:GetChildren()) do
+            if chf ~= nil and (v:IsA("Frame") or v:IsA("ScrollingFrame")) then
+                table.insert(frames,v)
+            elseif not chf then
+                table.insert(frames,v)
+            end
+        end
+    else
+        table.insert(frames,frame)
+    end
+    for i,frame in pairs(frames) do
+        frame.Active = true -- uhh
+        local w,h = frame.AbsoluteSize.X,frame.AbsoluteSize.Y
+        local ar = w/h
+        frame.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not dragging[input] then
+                dragging[input] = frame
+                local firstpos = UDim2.new(0,mouse.X,0,mouse.Y)
+                local startpos = frame.Position
+                local move1 = uis.TouchMoved:Connect(function(input2)
+                    if input == input2 then
+                        dragtopos(firstpos,startpos,input2.Position,frame,bounds or nil,ar)
+                    end
+                end)
+                local move2 = uis.InputChanged:Connect(function(input2)
+                    if input2.UserInputType == Enum.UserInputType.MouseMovement then
+                        dragtopos(firstpos,startpos,input2.Position,frame,bounds or nil,ar)
+                    end
+                end)
+                repeat task.wait() until dragging[input] == nil
+                move1:Disconnect()
+                move2:Disconnect()
+            end
+        end)
+        uis.InputEnded:Connect(function(input)
+            dragging[input] = nil
+        end)
+        uis.InputBegan:Connect(function(input)
+            dragging[input] = true
+        end)
+    end
+end
+return drag
+end)
+if not drag then
+    drag = function(f)
+        f.Active = true
+        f.Draggable = true
+    end
+end
+
+-- ساخت UI
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,220,0,90)
+frame.Position = UDim2.new(0.5,-110,0.5,-45)
+frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+frame.BorderColor3 = Color3.fromRGB(255,255,255)
+frame.Parent = gui
+drag(frame)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0.4,0)
+title.BackgroundTransparency = 1
+title.Text = "Anti Slap V2"
+title.TextScaled = true
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = frame
+
+local toggle = Instance.new("TextButton")
+toggle.Position = UDim2.new(0,10,0.45,0)
+toggle.Size = UDim2.new(1,-20,0.45,0)
+toggle.BackgroundColor3 = Color3.fromRGB(60,60,60)
+toggle.BorderColor3 = Color3.fromRGB(255,255,255)
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.TextScaled = true
+toggle.Parent = frame
+
+local AntiFling = false
+local Connection
+
+-- تابع تبدیل کردن کاراکتر به تانک
+local function setupTankMode(char)
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if part.Name == "HumanoidRootPart" then
+                part.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0, 0, 1, 1)
+            else
+                part.Massless = true
+                part.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0, 0, 1, 1)
+            end
+        end
+    end
+
+    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+
+    local attachment = hrp:FindFirstChild("AntiFlingAttachment") or Instance.new("Attachment", hrp)
+    attachment.Name = "AntiFlingAttachment"
+
+    local mover = hrp:FindFirstChild("AntiFlingVelocity") or Instance.new("LinearVelocity", hrp)
+    mover.Name = "AntiFlingVelocity"
+    mover.Attachment0 = attachment
+    mover.RelativeTo = Enum.ActuatorRelativeTo.World
+    
+    mover.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+    mover.MaxAxesForce = Vector3.new(99999999, 0, 99999999) 
+    mover.Enabled = true
+end
+
+-- تابع بازگرداندن به حالت عادی
+local function disableTankMode(char)
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if hum then
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+    end
+    
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CustomPhysicalProperties = nil
+            if part.Name ~= "HumanoidRootPart" then
+                part.Massless = false
+            end
+        end
+    end
+
+    if hrp then
+        local mover = hrp:FindFirstChild("AntiFlingVelocity")
+        if mover then mover:Destroy() end
+        local att = hrp:FindFirstChild("AntiFlingAttachment")
+        if att then att:Destroy() end
+    end
+end
+
+-- حلقه‌ی دفاعی
+local function onUpdate()
+    if not AntiFling then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local mover = hrp and hrp:FindFirstChild("AntiFlingVelocity")
+
+    if hum and hrp then
+        if hum.PlatformStand then hum.PlatformStand = false end
+        if hum.Sit then hum.Sit = false end
+        
+        for _, obj in ipairs(hrp:GetChildren()) do
+            if obj:IsA("BodyVelocity") or obj:IsA("BodyThrust") or obj:IsA("BodyForce") 
+            or obj:IsA("BodyAngularVelocity") or obj:IsA("AngularVelocity") or obj:IsA("Torque") 
+            or (obj:IsA("LinearVelocity") and obj.Name ~= "AntiFlingVelocity") then
+                obj:Destroy()
+            end
+        end
+
+        local moveDir = hum.MoveDirection
+        local isNearWall = false
+        
+        -- آپدیت جدید: رادار تشخیص دیوار (جلوگیری از بالا رفتن از دیوار و چسبیدن به آن)
+        if moveDir.Magnitude > 0 then
+            local rayOrigin = hrp.Position
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = {char}
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            
+            -- ارسال یک پرتو به اندازه 2.2 استاد جلوتر از کاراکتر
+            local result = workspace:Raycast(rayOrigin, moveDir * 2.2, params)
+            
+            -- اگر به یک جسم سخت (مثل دیوار یا پله) برخورد کرد
+            if result and result.Instance and result.Instance.CanCollide then
+                isNearWall = true
+            end
+        end
+
+        -- اگر در حال بالا رفتن از نردبان هستید یا به دیوار نزدیک شده‌اید، نیروی هل‌دهنده را خاموش کن
+        if hum:GetState() == Enum.HumanoidStateType.Climbing or isNearWall then
+            if mover then mover.Enabled = false end
+        else
+            if mover then
+                mover.Enabled = true
+                mover.VectorVelocity = moveDir * hum.WalkSpeed
+            end
+        end
+
+        -- محدود کننده‌های سرعت (خفه‌کننده پرتاب)
+        local vel = hrp.AssemblyLinearVelocity
+        local newX, newY, newZ = vel.X, vel.Y, vel.Z
+
+        if vel.Y > 65 or vel.Y < -150 then newY = 0 end
+        
+        if moveDir.Magnitude == 0 then
+            if math.abs(vel.X) > 1 then newX = 0 end
+            if math.abs(vel.Z) > 1 then newZ = 0 end
+        end
+
+        if newX ~= vel.X or newY ~= vel.Y or newZ ~= vel.Z then
+            hrp.AssemblyLinearVelocity = Vector3.new(newX, newY, newZ)
+        end
+        
+        local angVel = hrp.AssemblyAngularVelocity
+        hrp.AssemblyAngularVelocity = Vector3.new(0, math.clamp(angVel.Y, -15, 15), 0)
+    end
+end
+
+local function refresh()
+    if AntiFling then
+        toggle.Text = "Anti Slap: ON"
+        setupTankMode(LocalPlayer.Character)
+        if not Connection then
+            Connection = RunService.Stepped:Connect(onUpdate)
+        end
+    else
+        toggle.Text = "Anti Slap: OFF"
+        disableTankMode(LocalPlayer.Character)
+        if Connection then
+            Connection:Disconnect()
+            Connection = nil
+        end
+    end
+end
+
+toggle.MouseButton1Click:Connect(function()
+    AntiFling = not AntiFling
+    refresh()
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if AntiFling then
+        setupTankMode(char)
+    end
+end)
+
+refresh()

@@ -1,0 +1,296 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+local SuperSpeedAmount = 200 
+local PhaseDistance = 0.2   
+local SoundID = "rbxassetid://89362634813966"
+
+-- ساخت GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "PureSpeedGUI"
+gui.ResetOnSpawn = false
+if game.CoreGui:FindFirstChild("PureSpeedGUI") then game.CoreGui.PureSpeedGUI:Destroy() end
+gui.Parent = game.CoreGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 180)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+mainFrame.Active = true
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 255, 150)
+stroke.Thickness = 2
+stroke.Parent = mainFrame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -50, 0, 40)
+title.Position = UDim2.new(0, 15, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "C00LHACK1124 - SPEED"
+title.TextColor3 = Color3.fromRGB(0, 255, 150)
+title.Font = Enum.Font.Code
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = mainFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -38, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.Code
+closeBtn.TextSize = 16
+closeBtn.Parent = mainFrame
+
+local speedBtn = Instance.new("TextButton")
+speedBtn.Size = UDim2.new(0.9, 0, 0, 45)
+speedBtn.Position = UDim2.new(0.05, 0, 0, 50)
+speedBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+speedBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+speedBtn.Text = "Speed MODE [OFF]"
+speedBtn.Font = Enum.Font.Code
+speedBtn.TextSize = 15
+speedBtn.Parent = mainFrame
+
+local dodgeBtn = Instance.new("TextButton")
+dodgeBtn.Size = UDim2.new(0.9, 0, 0, 45)
+dodgeBtn.Position = UDim2.new(0.05, 0, 0, 110)
+dodgeBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+dodgeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+dodgeBtn.Text = "DODGE MASTER [OFF]"
+dodgeBtn.Font = Enum.Font.Code
+dodgeBtn.TextSize = 15
+dodgeBtn.Parent = mainFrame
+
+-- سیستم درگ GUI
+local function dragify(Frame)
+    local dragToggle, dragStart, startPos, dragInput
+    Frame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and UserInputService:GetFocusedTextBox() == nil then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = Frame.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+        if input == dragInput and dragToggle then
+            local Delta = input.Position - dragStart
+            local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+            TweenService:Create(Frame, TweenInfo.new(0.15), {Position = Position}):Play()
+        end
+    end)
+    Frame.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragToggle = false end end)
+end
+dragify(mainFrame)
+
+local speedActive, speedConnection, camPart, lastOffset, audioLoopRunning = false, nil, nil, 0, false
+local dodgeActive = false
+local dodgeCamPart = nil
+local dodgeCamConnection = nil
+local dodgeCenterCFrame = nil 
+
+local function getHRP() return player.Character and player.Character:FindFirstChild("HumanoidRootPart") end
+
+local function disableHack()
+    speedActive = false
+    dodgeActive = false
+    speedBtn.Text = "Speed MODE [OFF]"
+    speedBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    dodgeBtn.Text = "DODGE MASTER [OFF]"
+    dodgeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    
+    if speedConnection then speedConnection:Disconnect() speedConnection = nil end
+    if camPart then camPart:Destroy() camPart = nil end
+    
+    if dodgeCamConnection then dodgeCamConnection:Disconnect() dodgeCamConnection = nil end
+    if dodgeCamPart then dodgeCamPart:Destroy() dodgeCamPart = nil end
+    
+    audioLoopRunning = false
+    
+    local hrp = getHRP()
+    if hrp and dodgeCenterCFrame then
+        hrp.CFrame = dodgeCenterCFrame
+    end
+    dodgeCenterCFrame = nil
+    
+    if hrp and hrp:FindFirstChild("HackSounds") then hrp.HackSounds:Destroy() end
+    local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+    if hum then 
+        hum.AutoRotate = true 
+        Workspace.CurrentCamera.CameraSubject = hum 
+        local animator = hum:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                track:AdjustSpeed(1)
+            end
+        end
+    end
+    lastOffset = 0
+end
+
+-- سیستم Speed + اصلاح سرعت انیمیشن
+speedBtn.MouseButton1Click:Connect(function()
+    if speedActive then disableHack() else
+        speedActive = true
+        speedBtn.Text = "Speed MODE [ON]"
+        speedBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+        camPart = Instance.new("Part")
+        camPart.Transparency = 1; camPart.CanCollide = false; camPart.Anchored = true; camPart.Size = Vector3.new(1, 1, 1)
+        local hrp = getHRP()
+        if hrp then camPart.CFrame = hrp.CFrame end
+        camPart.Parent = Workspace
+        Workspace.CurrentCamera.CameraSubject = camPart
+        audioLoopRunning = true
+        task.spawn(function()
+            while audioLoopRunning do
+                local currentHrp = getHRP()
+                if currentHrp then
+                    local folder = currentHrp:FindFirstChild("HackSounds") or Instance.new("Folder", currentHrp)
+                    folder.Name = "HackSounds"
+                    local burstSound = Instance.new("Sound")
+                    burstSound.SoundId = SoundID; burstSound.Volume = 8; burstSound.Parent = folder
+                    burstSound:Play()
+                    task.delay(1.5, function() if burstSound then burstSound:Destroy() end end)
+                end
+                task.wait(0.2)
+            end
+        end)
+        speedConnection = RunService.RenderStepped:Connect(function(dt)
+            local currentHrp = getHRP()
+            local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+            if currentHrp and hum then
+                local baseCFrame = currentHrp.CFrame * CFrame.new(-lastOffset, 0, 0)
+                
+                local animator = hum:FindFirstChildOfClass("Animator")
+                if hum.MoveDirection.Magnitude > 0 then
+                    hum.AutoRotate = false
+                    local nextPos = baseCFrame.Position + (hum.MoveDirection * (SuperSpeedAmount * dt))
+                    baseCFrame = CFrame.lookAt(nextPos, nextPos + hum.MoveDirection)
+                    
+                    if animator then
+                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                            track:AdjustSpeed(4.5)
+                        end
+                    end
+                else 
+                    hum.AutoRotate = true 
+                    if animator then
+                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                            track:AdjustSpeed(1)
+                        end
+                    end
+                end
+                
+                camPart.CFrame = camPart.CFrame:Lerp(baseCFrame * CFrame.new(0, 1.5, 0), 0.45)
+                lastOffset = (lastOffset == PhaseDistance) and -PhaseDistance or PhaseDistance
+                currentHrp.CFrame = baseCFrame * CFrame.new(lastOffset, 0, 0)
+            end
+        end)
+    end
+end)
+
+-- سیستم دوج مسافت اصلاح شده (بازه متغیر بین ۲۰ تا ۳۰ استد)
+dodgeBtn.MouseButton1Click:Connect(function()
+    dodgeActive = not dodgeActive
+    dodgeBtn.Text = dodgeActive and "DODGE MASTER [ON]" or "DODGE MASTER [OFF]"
+    dodgeBtn.TextColor3 = dodgeActive and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 80, 80)
+    
+    if dodgeActive then
+        if not dodgeCamPart then
+            dodgeCamPart = Instance.new("Part")
+            dodgeCamPart.Transparency = 1; dodgeCamPart.CanCollide = false; dodgeCamPart.Anchored = true; dodgeCamPart.Size = Vector3.new(1, 1, 1)
+            dodgeCamPart.Name = "DodgeCamPart"
+            dodgeCamPart.Parent = Workspace
+        end
+        
+        local hrpStart = getHRP()
+        if hrpStart then
+            dodgeCenterCFrame = hrpStart.CFrame
+            dodgeCamPart.CFrame = dodgeCenterCFrame
+            Workspace.CurrentCamera.CameraSubject = dodgeCamPart
+        end
+        
+        dodgeCamConnection = RunService.RenderStepped:Connect(function()
+            if dodgeCenterCFrame and dodgeCamPart then
+                local targetCamPos = dodgeCenterCFrame * CFrame.new(0, 1.5, 0)
+                dodgeCamPart.CFrame = dodgeCamPart.CFrame:Lerp(targetCamPos, 0.12)
+            end
+        end)
+        
+        local currentAngle = 0
+        local waveCounter = 0 
+        
+        task.spawn(function()
+            while dodgeActive do
+                local hrp = getHRP()
+                local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+                
+                if hrp and hum then
+                    if hum.MoveDirection.Magnitude > 0 then
+                        local moveSpeed = hum.WalkSpeed > 16 and hum.WalkSpeed or 16
+                        dodgeCenterCFrame = dodgeCenterCFrame + (hum.MoveDirection * (moveSpeed * 0.048))
+                    end
+                    
+                    local center = dodgeCenterCFrame
+                    
+                    waveCounter = waveCounter + 0.75
+                    -- تغییر فرمول به بازه ۲۰ تا ۳۰ استد (مرکز روی ۲۵ استد + ۵ استد نوسان موج سینوسی)
+                    local dynamicRadius = 25 + (math.sin(waveCounter) * 5)
+                    
+                    currentAngle = currentAngle + math.rad(80) 
+                    
+                    local targets = {
+                        center * CFrame.Angles(0, currentAngle, 0) * CFrame.new(dynamicRadius, 0, 0),
+                        center * CFrame.Angles(0, currentAngle + math.rad(90), 0) * CFrame.new(dynamicRadius, 0, 0),
+                        center * CFrame.Angles(0, currentAngle + math.rad(180), 0) * CFrame.new(dynamicRadius, 0, 0),
+                        center * CFrame.Angles(0, currentAngle + math.rad(270), 0) * CFrame.new(dynamicRadius, 0, 0)
+                    }
+                    
+                    for _, targetCFrame in ipairs(targets) do
+                        if not dodgeActive then break end
+                        local currentHrp = getHRP()
+                        if currentHrp then
+                            currentHrp.CFrame = targetCFrame
+                        end
+                        task.wait() 
+                    end
+                else
+                    task.wait()
+                end
+            end
+        end)
+    else
+        if dodgeCamConnection then dodgeCamConnection:Disconnect() dodgeCamConnection = nil end
+        if dodgeCamPart then dodgeCamPart:Destroy() dodgeCamPart = nil end
+        
+        local hrp = getHRP()
+        if hrp and dodgeCenterCFrame then
+            hrp.CFrame = dodgeCenterCFrame
+        end
+        dodgeCenterCFrame = nil
+        
+        local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+        if hum then 
+            hum.AutoRotate = true 
+            if not speedActive then
+                 Workspace.CurrentCamera.CameraSubject = hum
+            end
+        end
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function() disableHack() gui:Destroy() end)

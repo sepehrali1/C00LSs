@@ -1,0 +1,246 @@
+-- Services
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- پاکسازی GUI قبلی در صورت وجود
+if playerGui:FindFirstChild("LuxuriousAdminGiverGUI") then
+	playerGui.LuxuriousAdminGiverGUI:Destroy()
+end
+
+-- ایجاد ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LuxuriousAdminGiverGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- ایجاد پنل اصلی (Main Frame)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(70, 70, 90)
+mainStroke.Thickness = 1.5
+mainStroke.Parent = mainFrame
+
+-- نوار بالایی (Title Bar)
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 45)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "⚡ ADMIN GIVER CONTROLLER ⚡"
+titleLabel.TextColor3 = Color3.fromRGB(240, 240, 255)
+titleLabel.TextSize = 15
+titleLabel.Parent = mainFrame
+
+-- خط جداکننده
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0.9, 0, 0, 1)
+divider.Position = UDim2.new(0.05, 0, 0, 45)
+divider.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+divider.BorderSizePixel = 0
+divider.Parent = mainFrame
+
+-- دکمه ON/OFF
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0.9, 0, 0, 50)
+toggleButton.Position = UDim2.new(0.05, 0, 0, 65)
+toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Text = "Status: OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 80, 80)
+toggleButton.TextSize = 14
+toggleButton.Parent = mainFrame
+
+local btnCorner1 = Instance.new("UICorner")
+btnCorner1.CornerRadius = UDim.new(0, 8)
+btnCorner1.Parent = toggleButton
+
+-- دکمه ServerHop
+local hopButton = Instance.new("TextButton")
+hopButton.Size = UDim2.new(0.9, 0, 0, 50)
+hopButton.Position = UDim2.new(0.05, 0, 0, 135)
+hopButton.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+hopButton.Font = Enum.Font.GothamBold
+hopButton.Text = "🚀 Server Hop"
+hopButton.TextColor3 = Color3.fromRGB(100, 200, 255)
+hopButton.TextSize = 14
+hopButton.Parent = mainFrame
+
+local btnCorner2 = Instance.new("UICorner")
+btnCorner2.CornerRadius = UDim.new(0, 8)
+btnCorner2.Parent = hopButton
+
+-- منطق اسکن پارت‌ها
+local isRunning = false
+local scanConnection = nil
+
+local function scanAndProcess()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") and obj.Name == "admingiver" then
+			local originalCFrame = obj.CFrame
+			local originalCanCollide = obj.CanCollide
+			local originalTransparency = obj.Transparency
+			
+			obj.CanCollide = false
+			obj.Transparency = 1
+			
+			task.spawn(function()
+				local startTime = tick()
+				local connection
+				connection = RunService.RenderStepped:Connect(function()
+					local character = player.Character
+					if character and character:FindFirstChild("HumanoidRootPart") and tick() - startTime <= 1 then
+						local hrp = character.HumanoidRootPart
+						local spinAngle = (tick() - startTime) * 15
+						obj.CFrame = hrp.CFrame * CFrame.Angles(0, spinAngle, 0) + Vector3.new(0, 2, 0)
+					else
+						connection:Disconnect()
+					end
+				end)
+				
+				task.wait(1)
+				if connection.Connected then
+					connection:Disconnect()
+				end
+				
+				obj.CFrame = originalCFrame
+				obj.CanCollide = originalCanCollide
+				obj.Transparency = originalTransparency
+			end)
+		end
+	end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+	isRunning = not isRunning
+	if isRunning then
+		toggleButton.Text = "Status: ON (Scanning...)"
+		toggleButton.TextColor3 = Color3.fromRGB(80, 255, 120)
+		
+		scanAndProcess()
+		scanConnection = task.spawn(function()
+			while isRunning do
+				scanAndProcess()
+				task.wait(1.5)
+			end
+		end)
+	else
+		toggleButton.Text = "Status: OFF"
+		toggleButton.TextColor3 = Color3.fromRGB(255, 80, 80)
+		if scanConnection then
+			task.cancel(scanConnection)
+			scanConnection = nil
+		end
+	end
+end)
+
+-- متد پیشرفته سرورهاپ
+local function serverHop()
+	hopButton.Text = "Hop in progress..."
+	hopButton.TextColor3 = Color3.fromRGB(255, 200, 80)
+
+	local AllIDs = {}
+	local foundAnything = ""
+	local actualHour = os.date("!*t").hour
+	local placeId = game.PlaceId
+
+	local File = pcall(function()
+		AllIDs = HttpService:JSONDecode(readfile("server-hop-temp.json"))
+	end)
+	if not File then
+		table.insert(AllIDs, actualHour)
+		pcall(function()
+			writefile("server-hop-temp.json", HttpService:JSONEncode(AllIDs))
+		end)
+	end
+
+	local function TPReturner()
+		local Site;
+		if foundAnything == "" then
+			Site = HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. placeId .. '/servers/Public?sortOrder=Asc&limit=100'))
+		else
+			Site = HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. placeId .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
+		end
+		local ID = ""
+		if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+			foundAnything = Site.nextPageCursor
+		end
+		local num = 0;
+		for i,v in pairs(Site.data) do
+			local Possible = true
+			ID = tostring(v.id)
+			if tonumber(v.maxPlayers) > tonumber(v.playing) then
+				for _,Existing in pairs(AllIDs) do
+					if num ~= 0 then
+						if ID == tostring(Existing) then
+							Possible = false
+						end
+					else
+						if tonumber(actualHour) ~= tonumber(Existing) then
+							pcall(function()
+								delfile("server-hop-temp.json")
+								AllIDs = {}
+								table.insert(AllIDs, actualHour)
+							end)
+						end
+					end
+					num = num + 1
+				end
+				if Possible == true then
+					table.insert(AllIDs, ID)
+					task.wait()
+					pcall(function()
+						writefile("server-hop-temp.json", HttpService:JSONEncode(AllIDs))
+						task.wait()
+
+						-- 🟢 اضافه شده: سیستم ذخیره اسکریپت برای سرور بعدی
+						local scriptToRun = [[
+							repeat task.wait() until game:IsLoaded()
+							loadstring(game:HttpGet("https://raw.githubusercontent.com/ermiya1231/Script1/refs/heads/main/obby"))()
+						]]
+						
+						local queueFunction = queue_on_teleport or (syn and syn.queue_on_teleport) or (Fluxus and Fluxus.queue_on_teleport)
+						if queueFunction then
+							queueFunction(scriptToRun)
+						end
+
+						-- تلپورت به سرور جدید
+						TeleportService:TeleportToPlaceInstance(placeId, ID, player)
+					end)
+					task.wait(4)
+				end
+			end
+		end
+	end
+
+	task.spawn(function()
+		while task.wait() do
+			pcall(function()
+				TPReturner()
+				if foundAnything ~= "" then
+					TPReturner()
+				end
+			end)
+		end
+	end)
+end
+
+hopButton.MouseButton1Click:Connect(function()
+	serverHop()
+end)

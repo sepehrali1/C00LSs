@@ -1,0 +1,144 @@
+local MyTargetID = "122714132204276" -- آیدی دکال
+
+local player = game.Players.LocalPlayer
+local tool
+
+-- پیدا کردن ابزار F3X
+for i, v in player:GetDescendants() do
+	if v.Name == "SyncAPI" then
+		tool = v.Parent
+	end
+end
+
+for i, v in game.ReplicatedStorage:GetDescendants() do
+	if v.Name == "SyncAPI" then
+		tool = v.Parent
+	end
+end
+
+if not tool or not tool:FindFirstChild("SyncAPI") then
+	warn("ابزار F3X پیدا نشد!")
+	return
+end
+
+local remote = tool.SyncAPI.ServerEndpoint
+
+function Invoke(args)
+	remote:InvokeServer(unpack(args))
+end
+
+function FastInvoke(args)
+	task.spawn(function()
+		remote:InvokeServer(unpack(args))
+	end)
+end
+
+function SetCollision(part, boolean)
+	FastInvoke({"SyncCollision", {{["Part"] = part, ["CanCollide"] = boolean}}})
+end
+
+function SetAnchor(boolean, part)
+	FastInvoke({"SyncAnchor", {{["Part"] = part, ["Anchored"] = boolean}}})
+end
+
+function CreatePart(cf, parent)
+	Invoke({"CreatePart", "Normal", cf, parent})
+end
+
+function Resize(part, size, cf)
+	FastInvoke({"SyncResize", {{["Part"] = part, ["CFrame"] = cf, ["Size"] = size}}})
+end
+
+local function delete(part)
+	FastInvoke({"Remove", {part}})
+end
+
+function SetTrans(part, int)
+	FastInvoke({"SyncMaterial", {{["Part"] = part, ["Transparency"] = int}}})
+end
+
+function SpawnDecal(part, side)
+	FastInvoke({"CreateTextures", {{["Part"] = part, ["Face"] = side, ["TextureType"] = "Decal"}}})
+end
+
+function AddDecal(part, asset, side)
+	FastInvoke({"SyncTexture", {{["Part"] = part, ["Face"] = side, ["TextureType"] = "Decal", ["Texture"] = "rbxassetid://".. asset}}})
+end
+
+function SetName(part, stringg)
+	FastInvoke({"SetName", {part}, stringg})
+end
+
+local function particle()
+	while true do
+		task.wait(0.3) -- سرعت اسپاون بیشتر شد (قبلا 0.5 بود)
+		
+		for _, plr in pairs(game.Players:GetPlayers()) do
+			if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+				local head = plr.Character.Head
+				
+				local targetX = head.Position.X + (math.random(-8, 8) / 10)
+				local targetY = head.Position.Y + 0.2
+				local targetZ = head.Position.Z + (math.random(-8, 8) / 10)
+				
+				-- ساخت پارت تو آسمون
+				local tempY = targetY + 1000
+				local tempSpawnCF = CFrame.new(targetX, tempY, targetZ)
+
+				task.spawn(function()
+					CreatePart(tempSpawnCF, workspace)
+					task.wait() 
+
+					for _, v in workspace:GetChildren() do
+						if v:IsA("Part") and (v.Position - Vector3.new(targetX, tempY, targetZ)).Magnitude < 4 and v.Name ~= "MagicParticle" then
+							local part = v
+
+							SetName(part, "MagicParticle")
+							SetCollision(part, false)
+							SetAnchor(true, part)
+							SetTrans(part, 1)
+
+							SpawnDecal(part, Enum.NormalId.Front)
+							AddDecal(part, MyTargetID, Enum.NormalId.Front)
+
+							SpawnDecal(part, Enum.NormalId.Back)
+							AddDecal(part, MyTargetID, Enum.NormalId.Back)
+
+							local currentCF = CFrame.new(targetX, targetY, targetZ) * CFrame.Angles(0, math.rad(math.random(0, 360)), 0)
+							local currentSize = Vector3.new(2, 2, 0.001)
+							
+							-- انتقال آنی به روی سر بازیکن
+							Resize(part, currentSize, currentCF)
+
+							task.delay(3, function()
+								if part and part.Parent then
+									delete(part)
+								end
+							end)
+
+							-- سرعت حرکت ملایم‌تر شد
+							local driftX = math.random(-2, 2) / 15 -- انحراف نرم‌تر به چپ و راست
+							local driftZ = math.random(-2, 2) / 15
+							local speedY = 0.25 -- سرعت بالا رفتن خیلی کمتر و ملایم‌تر شد
+							local moveVector = Vector3.new(driftX, speedY, driftZ)
+
+							local startTick = tick()
+							while tick() - startTick < 2.9 do
+								if part and part.Parent then
+									currentCF = currentCF + moveVector
+									Resize(part, currentSize, currentCF) 
+									task.wait(0.06)
+								else
+									break
+								end
+							end
+							break
+						end
+					end
+				end)
+			end
+		end
+	end
+end
+
+coroutine.wrap(particle)()
