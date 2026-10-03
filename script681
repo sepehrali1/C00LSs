@@ -1,0 +1,26 @@
+-- تعریف تابع برای نمایش نوتیفیکیشن روی صفحه
+local function notify(title, text)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 5 -- مدت زمان نمایش پیام به ثانیه
+    })
+end
+
+-- اسکریپت اصلی شما
+if saveinstance then
+    notify("Loading", "Downloading game. This will take a while")
+    
+    -- استفاده از pcall برای جلوگیری از کرش کردن در صورت بروز خطای داخلی
+    local success, err = pcall(function()
+        saveinstance()
+    end)
+    
+    if success then
+        notify("Game Saved", "Saved place to the workspace folder within your exploit folder.")
+    else
+        notify("Error", "Failed to save: " .. tostring(err))
+    end
+else
+    notify("Incompatible Exploit", "Your exploit does not support this command (missing saveinstance)")
+end

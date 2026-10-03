@@ -1,0 +1,36 @@
+-- تابع برای نمایش نوتیفیکیشن
+local function notify(title, text)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = 5
+        })
+    end)
+end
+
+-- دسترسی ایمن به CoreGui
+local CoreGui = game:GetService("CoreGui")
+
+-- اگر اسکریپت قبلاً اجرا شده باشد، اتصال قبلی را قطع می‌کند تا بازی لگ نگیرد
+if getgenv().networkPaused then
+    pcall(function() getgenv().networkPaused:Disconnect() end)
+end
+
+-- جلوگیری از ظاهر شدن صفحه NetworkPause در آینده
+getgenv().networkPaused = CoreGui.RobloxGui.ChildAdded:Connect(function(obj)
+    if obj.Name == "CoreScripts/NetworkPause" then
+        pcall(function() obj:Destroy() end)
+    end
+end)
+
+-- حذف صفحه NetworkPause در صورتی که در حال حاضر روی صفحه باشد
+pcall(function()
+    local existingPause = CoreGui.RobloxGui:FindFirstChild("CoreScripts/NetworkPause")
+    if existingPause then
+        existingPause:Destroy()
+    end
+end)
+
+-- نمایش پیام فعال شدن اسکریپت
+notify("AntiGamePlayPaused", "AntiGamePlayPaused Enabled")

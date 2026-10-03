@@ -1,0 +1,143 @@
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- ساخت اسکرین اصلی
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiVoidHubRGB"
+ScreenGui.ResetOnSpawn = false
+
+-- قرار دادن GUI در CoreGui برای مخفی موندن
+local success = pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not success then
+    ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- ساخت پنل اصلی (کوچیک تر شده)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 200, 0, 100) -- ابعاد جمع و جور
+MainFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- گرد کردن گوشه های پنل
+local PanelCorner = Instance.new("UICorner")
+PanelCorner.CornerRadius = UDim.new(0, 10)
+PanelCorner.Parent = MainFrame
+
+-- حاشیه رنگی دور پنل (برای افکت RGB)
+local PanelStroke = Instance.new("UIStroke")
+PanelStroke.Thickness = 2
+PanelStroke.Parent = MainFrame
+
+-- تایتل پنل
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "C00LHACK Anti Void"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = MainFrame
+
+-- دکمه روشن/خاموش (کوچیک تر شده)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 140, 0, 35)
+ToggleButton.Position = UDim2.new(0.5, -70, 0, 45)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
+ToggleButton.Text = "OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 18
+ToggleButton.AutoButtonColor = false
+ToggleButton.Parent = MainFrame
+
+-- گرد کردن گوشه های دکمه
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = ToggleButton
+
+---------------------------------------------------------
+-- افکت حاشیه RGB (رنگین کمانی)
+---------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+    -- زمان رو تقسیم بر 4 میکنیم تا سرعت تغییر رنگ مناسب باشه (عدد کمتر = سریع تر)
+    local hue = tick() % 4 / 4 
+    PanelStroke.Color = Color3.fromHSV(hue, 1, 1)
+end)
+
+---------------------------------------------------------
+-- منطق آنتی وید و انیمیشن
+---------------------------------------------------------
+local normalHeight = Workspace.FallenPartsDestroyHeight
+local isAntiVoidOn = false
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    isAntiVoidOn = not isAntiVoidOn
+    
+    local goalColor
+    if isAntiVoidOn then
+        Workspace.FallenPartsDestroyHeight = 0/0
+        ToggleButton.Text = "ON"
+        goalColor = Color3.fromRGB(75, 255, 115)
+    else
+        Workspace.FallenPartsDestroyHeight = normalHeight
+        ToggleButton.Text = "OFF"
+        goalColor = Color3.fromRGB(255, 75, 75)
+    end
+    
+    local colorTween = TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = goalColor})
+    colorTween:Play()
+end)
+
+---------------------------------------------------------
+-- سیستم جابجایی پنل با موس (کد درخواستی شما)
+---------------------------------------------------------
+local function dragify(Frame)
+    local dragToggle = nil
+    local dragSpeed = 0.15
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+    
+    local function updateInput(input)
+        local Delta = input.Position - dragStart
+        local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+        TweenService:Create(Frame, TweenInfo.new(dragSpeed), {Position = Position}):Play()
+    end
+    
+    Frame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and UserInputService:GetFocusedTextBox() == nil then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = Frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+    
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            updateInput(input)
+        end
+    end)
+end
+
+-- اعمال قابلیت درگ روی پنل اصلی
+dragify(MainFrame)

@@ -1,0 +1,4 @@
+game.StarterGui:SetCore("SendNotification", {
+    Title = "کص ننت",
+    Text = "کصکش"
+})

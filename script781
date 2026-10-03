@@ -1,0 +1,341 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+---------------------------------------------------------
+-- محاسبه ضریب سایز برای موبایل و کامپیوتر
+---------------------------------------------------------
+local function getScaleFactor()
+	if not Camera then return 1 end
+	-- بر اساس ارتفاع صفحه، ضریب را حساب می‌کند (روی گوشی‌ها کوچکتر می‌شود)
+	return math.clamp(Camera.ViewportSize.Y / 720, 0.5, 1.4)
+end
+
+---------------------------------------------------------
+-- 1. ساخت GUI اصلی (کاملا ریسپانسیو)
+---------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "InventoryViewerGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local lolzermenu = Instance.new("Frame")
+lolzermenu.Name = "MainFrame"
+-- استفاده از Scale برای سازگاری با همه صفحه نمایش‌ها
+lolzermenu.Size = UDim2.new(0.3, 0, 0.3, 0) 
+lolzermenu.Position = UDim2.new(0.5, 0, 0.5, 0)
+lolzermenu.AnchorPoint = Vector2.new(0.5, 0.5)
+lolzermenu.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+lolzermenu.BorderSizePixel = 2
+lolzermenu.BorderColor3 = Color3.fromRGB(60, 60, 70)
+lolzermenu.Parent = ScreenGui
+
+-- قفل کردن نسبت ابعاد (جلوگیری از له شدن منو در موبایل)
+local aspect = Instance.new("UIAspectRatioConstraint")
+aspect.AspectRatio = 2.0 -- عرض همیشه دو برابر ارتفاع
+aspect.Parent = lolzermenu
+
+-- محدودیت سایز (جلوگیری از غول پیکر شدن در مانیتورهای 4K)
+local sizeLimit = Instance.new("UISizeConstraint")
+sizeLimit.MaxSize = Vector2.new(300, 150)
+sizeLimit.MinSize = Vector2.new(180, 90)
+sizeLimit.Parent = lolzermenu
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, 0, 0.25, 0)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+titleLabel.BorderSizePixel = 0
+titleLabel.Text = "Inventory Viewer By C00LHACK"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true -- تنظیم خودکار سایز متن
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Parent = lolzermenu
+
+local titlePadding = Instance.new("UIPadding")
+titlePadding.PaddingTop = UDim.new(0.2, 0)
+titlePadding.PaddingBottom = UDim.new(0.2, 0)
+titlePadding.Parent = titleLabel
+
+local onButton = Instance.new("TextButton")
+onButton.Name = "ON_Button"
+onButton.Size = UDim2.new(0.4, 0, 0.35, 0)
+onButton.Position = UDim2.new(0.07, 0, 0.45, 0)
+onButton.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+onButton.BorderSizePixel = 0
+onButton.Text = "ON"
+onButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+onButton.TextScaled = true
+onButton.Font = Enum.Font.SourceSansBold
+onButton.Parent = lolzermenu
+
+local offButton = Instance.new("TextButton")
+offButton.Name = "OFF_Button"
+offButton.Size = UDim2.new(0.4, 0, 0.35, 0)
+offButton.Position = UDim2.new(0.53, 0, 0.45, 0)
+offButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+offButton.BorderSizePixel = 0
+offButton.Text = "OFF"
+offButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+offButton.TextScaled = true
+offButton.Font = Enum.Font.SourceSansBold
+offButton.Parent = lolzermenu
+
+local txtLimitOn = Instance.new("UITextSizeConstraint", onButton)
+txtLimitOn.MaxTextSize = 22
+local txtLimitOff = Instance.new("UITextSizeConstraint", offButton)
+txtLimitOff.MaxTextSize = 22
+
+---------------------------------------------------------
+-- 2. سیستم درگ
+---------------------------------------------------------
+local function FOSWQR_fake_script()
+	local UIS = game:GetService("UserInputService")
+	function dragify(Frame)
+		local dragToggle = nil
+		local dragInput = nil
+		local dragStart = nil
+		local startPos = nil
+
+		local function updateInput(input)
+			local Delta = input.Position - dragStart
+			local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+			TweenService:Create(Frame, TweenInfo.new(0.15), {Position = Position}):Play()
+		end
+
+		Frame.InputBegan:Connect(function(input)
+			if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and UIS:GetFocusedTextBox() == nil then
+				dragToggle = true
+				dragStart = input.Position
+				startPos = Frame.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						dragToggle = false
+					end
+				end)
+			end
+		end)
+
+		Frame.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				dragInput = input
+			end
+		end)
+
+		UIS.InputChanged:Connect(function(input)
+			if input == dragInput and dragToggle then
+				updateInput(input)
+			end
+		end)
+	end
+	dragify(lolzermenu)
+end
+FOSWQR_fake_script()
+
+---------------------------------------------------------
+-- 3. منطق سیستم Overhead و هماهنگ‌سازی سایزها
+---------------------------------------------------------
+local isSystemActive = false 
+local guiContainer = Instance.new("Folder")
+guiContainer.Name = "OverheadInventories"
+guiContainer.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local playerConnections = {}
+
+local function updateInventoryDisplay(player, scrollFrame)
+	if not scrollFrame or not scrollFrame.Parent then return end
+	
+	for _, child in pairs(scrollFrame:GetChildren()) do
+		if child:IsA("GuiObject") then child:Destroy() end
+	end
+
+	local tools = {}
+	local backpack = player:FindFirstChild("Backpack")
+	if backpack then
+		for _, item in pairs(backpack:GetChildren()) do
+			if item:IsA("Tool") then table.insert(tools, item) end
+		end
+	end
+	
+	if player.Character then
+		for _, item in pairs(player.Character:GetChildren()) do
+			if item:IsA("Tool") then table.insert(tools, item) end
+		end
+	end
+
+	for _, tool in ipairs(tools) do
+		if tool.TextureId and tool.TextureId ~= "" then
+			local icon = Instance.new("ImageLabel")
+			icon.Image = tool.TextureId
+			icon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			icon.BorderSizePixel = 0
+			icon.Parent = scrollFrame
+			
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = Color3.fromRGB(0, 255, 150)
+			stroke.Thickness = 2
+			stroke.Parent = icon
+		else
+			local txt = Instance.new("TextLabel")
+			txt.Text = tool.Name
+			txt.TextScaled = true
+			txt.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			txt.TextColor3 = Color3.fromRGB(10, 10, 10)
+			txt.BorderSizePixel = 0
+			txt.Parent = scrollFrame
+			
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = Color3.fromRGB(255, 50, 50)
+			stroke.Thickness = 2
+			stroke.Parent = txt
+		end
+	end
+end
+
+local function setupPlayer(player)
+	if not isSystemActive then return end
+	if player == LocalPlayer then return end
+	if guiContainer:FindFirstChild(player.Name .. "_InventoryGui") then return end
+
+	local sf = getScaleFactor() -- گرفتن ضریب سایز مخصوص دستگاه شما
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = player.Name .. "_InventoryGui"
+	-- اعمال ضریب روی سایز ثابت تا در موبایل کوچکتر و در PC استاندارد بماند
+	billboard.Size = UDim2.new(0, 180 * sf, 0, 120 * sf)
+	billboard.StudsOffset = Vector3.new(0, 4, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Active = true
+	billboard.MaxDistance = 65
+	billboard.Parent = guiContainer
+
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = UDim2.new(1, 0, 1, 0)
+	scroll.BackgroundTransparency = 0.2
+	scroll.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 4
+	scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.Parent = billboard
+
+	local grid = Instance.new("UIGridLayout")
+	-- اعمال ضریب روی آیکون‌ها
+	grid.CellSize = UDim2.new(0, 50 * sf, 0, 50 * sf)
+	grid.CellPadding = UDim2.new(0, 6 * sf, 0, 6 * sf)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	grid.Parent = scroll
+	
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 5 * sf)
+	padding.PaddingBottom = UDim.new(0, 5 * sf)
+	padding.Parent = scroll
+
+	playerConnections[player] = {}
+
+	local function onCharacter(char)
+		local head = char:WaitForChild("Head", 5)
+		local backpack = player:WaitForChild("Backpack", 5)
+		
+		if not isSystemActive or not playerConnections[player] then return end
+		
+		if head then billboard.Adornee = head end
+		
+		if backpack then
+			table.insert(playerConnections[player], backpack.ChildAdded:Connect(function() updateInventoryDisplay(player, scroll) end))
+			table.insert(playerConnections[player], backpack.ChildRemoved:Connect(function() updateInventoryDisplay(player, scroll) end))
+		end
+		
+		table.insert(playerConnections[player], char.ChildAdded:Connect(function() updateInventoryDisplay(player, scroll) end))
+		table.insert(playerConnections[player], char.ChildRemoved:Connect(function() updateInventoryDisplay(player, scroll) end))
+		
+		updateInventoryDisplay(player, scroll)
+	end
+
+	if player.Character then task.spawn(onCharacter, player.Character) end
+
+	local charConn = player.CharacterAdded:Connect(function(char)
+		if playerConnections[player] then
+			for _, c in ipairs(playerConnections[player]) do
+				if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+			end
+			playerConnections[player] = {playerConnections[player][1]} 
+		else
+			playerConnections[player] = {}
+		end
+		onCharacter(char)
+	end)
+	table.insert(playerConnections[player], 1, charConn) 
+end
+
+local function enableSystem()
+	if isSystemActive then return end
+	isSystemActive = true
+	for _, p in pairs(Players:GetPlayers()) do setupPlayer(p) end
+end
+
+local function disableSystem()
+	isSystemActive = false
+	for player, conns in pairs(playerConnections) do
+		for _, c in ipairs(conns) do
+			if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+		end
+	end
+	playerConnections = {}
+	guiContainer:ClearAllChildren()
+end
+
+Players.PlayerAdded:Connect(function(player) if isSystemActive then setupPlayer(player) end end)
+
+Players.PlayerRemoving:Connect(function(player)
+	if playerConnections[player] then
+		for _, c in ipairs(playerConnections[player]) do
+			if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+		end
+		playerConnections[player] = nil
+	end
+	local b = guiContainer:FindFirstChild(player.Name .. "_InventoryGui")
+	if b then b:Destroy() end
+end)
+
+---------------------------------------------------------
+-- آپدیت زنده سایزها اگر پنجره بازی کوچک یا بزرگ شد (یا چرخش گوشی)
+---------------------------------------------------------
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+	local sf = getScaleFactor()
+	for _, child in pairs(guiContainer:GetChildren()) do
+		if child:IsA("BillboardGui") then
+			child.Size = UDim2.new(0, 180 * sf, 0, 120 * sf)
+			local scroll = child:FindFirstChildOfClass("ScrollingFrame")
+			if scroll then
+				local grid = scroll:FindFirstChildOfClass("UIGridLayout")
+				if grid then
+					grid.CellSize = UDim2.new(0, 50 * sf, 0, 50 * sf)
+					grid.CellPadding = UDim2.new(0, 6 * sf, 0, 6 * sf)
+				end
+			end
+		end
+	end
+end)
+
+---------------------------------------------------------
+-- 4. اتصال دکمه‌ها
+---------------------------------------------------------
+onButton.MouseButton1Click:Connect(function()
+	enableSystem()
+	onButton.BackgroundTransparency = 0
+	offButton.BackgroundTransparency = 0.5
+end)
+
+offButton.MouseButton1Click:Connect(function()
+	disableSystem()
+	offButton.BackgroundTransparency = 0
+	onButton.BackgroundTransparency = 0.5
+end)
+
+offButton.BackgroundTransparency = 0
+onButton.BackgroundTransparency = 0.5
